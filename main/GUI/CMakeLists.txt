@@ -1,0 +1,39 @@
+SET( SOURCES
+    assets/fonts/Dongle_Bold_32.c
+    assets/fonts/Dongle_Bold_96.c
+    assets/fonts/Dongle_Regular_20.c
+    assets/fonts/Dongle_Regular_24.c
+    assets/fonts/Dongle_Regular_32.c
+    assets/fonts/Dongle_Regular_64.c
+    assets/images/upload_aurora_png.c
+    assets/images/upload_auroradetail_png.c
+    assets/images/upload_bol_png.c
+    assets/images/upload_chevrondown_svg.c
+    assets/images/upload_chevronsdown_svg.c
+    assets/images/upload_chevronsup_svg.c
+    assets/images/upload_chevronup_svg.c
+    assets/images/upload_circlechevronleft_png.c
+    assets/images/upload_circlex_png.c
+    assets/images/upload_corsica_png.c
+    assets/images/upload_eclipse_png.c
+    assets/images/upload_equalapproximately_svg.c
+    assets/images/upload_settings_png.c
+    behavior/animations.c
+    behavior/events.c
+    components/comp.c
+    components/comp_hook.c
+    components/price_trend_component.c
+    components/price_trend_down_component.c
+    components/price_trend_down_hard_component.c
+    components/price_trend_up_component.c
+    components/price_trend_up_hard_component.c
+    core/gui_core.c
+    core/variables.c
+    helpers/ui_helpers.c
+    screens/Home.c
+    screens/Settings.c
+    screens/WiFi_Setup.c
+)
+
+add_library( GUI ${SOURCES} )
+

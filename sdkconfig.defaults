@@ -1,0 +1,53 @@
+# --- Target ---
+CONFIG_IDF_TARGET="esp32s3"
+
+# --- Flash: 16 MB on the ESP32-S3R8 module (must match the real chip or
+#     spi_flash init asserts at boot -> endless boot loop) ---
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="16MB"
+
+# --- PSRAM: ESP32-S3R8 = 8 MB octal SPIRAM ---
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y
+CONFIG_SPIRAM_RODATA=y
+
+# --- CPU at full 240 MHz for smooth LVGL rendering ---
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+
+# --- LVGL runs in app_main; the default 3584 B stack overflows when drawing
+#     the SquareLine pressed-state (shadow + anti-alias + transition) ---
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=32768
+
+# --- Custom partition table (10M app + 5M storage) ---
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_LV_USE_FLOAT=y
+CONFIG_LV_USE_MATRIX=y
+CONFIG_LV_USE_VECTOR_GRAPHIC=y
+CONFIG_LV_USE_THORVG=y
+CONFIG_LV_USE_THORVG_INTERNAL=y
+CONFIG_LV_USE_SVG=y
+
+# --- LVGL heap: use the ESP-IDF heap (spills into PSRAM). The 64 KB builtin
+#     pool runs out while ThorVG renders the SVG -> LV_ASSERT_MALLOC spins in
+#     while(1) on CPU 0 -> task watchdog + half-drawn screen ---
+CONFIG_LV_USE_CLIB_MALLOC=y
+
+# --- LVGL logging, so failed asserts print instead of hanging silently ---
+CONFIG_LV_USE_LOG=y
+CONFIG_LV_LOG_LEVEL_WARN=y
+CONFIG_LV_LOG_PRINTF=y
+
+# --- WiFi setup portal: phones send long HTTP headers; WiFi/lwIP buffers in
+#     PSRAM so internal RAM stays free for LVGL's DMA draw buffers ---
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+
+# --- QR code on the WiFi_Setup screen (lv_qrcode) ---
+CONFIG_LV_USE_QRCODE=y
+
+# --- Tibber HTTPS: TLS buffers (~40 KB per handshake) in PSRAM, so internal
+#     RAM stays free for LVGL's DMA draw buffers ---
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y

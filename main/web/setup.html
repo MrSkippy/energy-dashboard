@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Energy Dashboard instellen</title>
+<style>
+  :root { --bg: #15171a; --card: #22252a; --text: #f2f2f2; --muted: #9aa0a6; --accent: #3399ff; --ok: #00cc66; --err: #ff5555; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text);
+         font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 8px 0 16px; }
+  .card { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  label { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 14px; }
+  select, input { width: 100%; padding: 12px; font-size: 16px; border-radius: 8px;
+                  border: 1px solid #3a3f46; background: #111316; color: var(--text); }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; }
+  .row button { width: auto; padding: 0 12px; background: #3a3f46; }
+  button { width: 100%; padding: 14px; margin-top: 16px; font-size: 16px; font-weight: 600;
+           border: 0; border-radius: 8px; background: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .hint a { color: var(--accent); }
+  #status { display: none; text-align: center; }
+  #status.ok { color: var(--ok); }
+  #status.err { color: var(--err); }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Energy Dashboard instellen</h1>
+
+  <form id="form" class="card">
+    <label for="network">WiFi-netwerk</label>
+    <select id="network"><option>Netwerken zoeken…</option></select>
+
+    <div id="manual" class="hidden">
+      <label for="ssid">Netwerknaam</label>
+      <input id="ssid" autocomplete="off" autocapitalize="none" spellcheck="false">
+    </div>
+
+    <label for="password">Wachtwoord</label>
+    <div class="row">
+      <input id="password" type="password" autocomplete="off">
+      <button type="button" id="show">Toon</button>
+    </div>
+
+    <label for="token">Tibber-token</label>
+    <input id="token" type="password" autocomplete="off" spellcheck="false"
+           placeholder="Leeg laten = huidige token houden">
+    <div class="hint">Te vinden op <a href="https://developer.tibber.com/settings/access-token">developer.tibber.com</a> (open die link later, op je eigen WiFi).</div>
+
+    <button id="save" type="submit">Opslaan</button>
+  </form>
+
+  <div id="status" class="card"></div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const OTHER = "__other__";
+
+function showStatus(text, cls) {
+  const s = $("status");
+  s.textContent = text;
+  s.className = "card " + (cls || "");
+  s.style.display = "block";
+}
+
+async function scan() {
+  const sel = $("network");
+  try {
+    const list = await (await fetch("/scan")).json();
+    const seen = new Set();
+    sel.innerHTML = "";
+    list.sort((a, b) => b.rssi - a.rssi).forEach(ap => {
+      if (seen.has(ap.ssid)) return;
+      seen.add(ap.ssid);
+      const o = document.createElement("option");
+      o.value = ap.ssid;
+      o.textContent = ap.ssid + (ap.secure ? "" : " (open)");
+      sel.appendChild(o);
+    });
+  } catch (e) {
+    sel.innerHTML = "";
+  }
+  const other = document.createElement("option");
+  other.value = OTHER;
+  other.textContent = "Ander netwerk…";
+  sel.appendChild(other);
+  if (sel.options.length === 1) sel.value = OTHER;
+  sel.onchange();
+}
+
+$("network").onchange = () => {
+  $("manual").classList.toggle("hidden", $("network").value !== OTHER);
+};
+
+$("show").onclick = () => {
+  const p = $("password");
+  p.type = p.type === "password" ? "text" : "password";
+  $("show").textContent = p.type === "password" ? "Toon" : "Verberg";
+};
+
+async function poll() {
+  try {
+    const st = await (await fetch("/status")).json();
+    if (st.state === "testing") {
+      showStatus("Verbinden met " + st.ssid + "…");
+    } else if (st.state === "done" || st.state === "connected") {
+      showStatus("Verbonden met " + st.ssid + "! Het dashboard gaat nu verder; je kunt deze pagina sluiten.", "ok");
+      return;
+    } else if (st.state === "failed") {
+      const why = { password: "Wachtwoord onjuist.", notfound: "Netwerk niet gevonden." }[st.reason]
+                  || "Verbinden mislukt.";
+      showStatus(why + " Controleer de gegevens en probeer opnieuw.", "err");
+      $("save").disabled = false;
+      return;
+    }
+  } catch (e) {
+    // While the dashboard joins your WiFi the hotspot can drop for a moment.
+    showStatus("Even geduld… Kijk ook op het scherm van het dashboard.");
+  }
+  setTimeout(poll, 1000);
+}
+
+$("form").onsubmit = async ev => {
+  ev.preventDefault();
+  const ssid = $("network").value === OTHER ? $("ssid").value.trim() : $("network").value;
+  const body = new URLSearchParams({ ssid, password: $("password").value, token: $("token").value.trim() });
+  $("save").disabled = true;
+  showStatus("Opslaan…");
+  try {
+    const r = await (await fetch("/save", { method: "POST", body })).json();
+    if (!r.ok) {
+      showStatus(r.error, "err");
+      $("save").disabled = false;
+      return;
+    }
+    poll();
+  } catch (e) {
+    showStatus("Opslaan mislukt, probeer opnieuw.", "err");
+    $("save").disabled = false;
+  }
+};
+
+scan();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# ESP-IDF build output and Component Manager state - do not commit these.
+#
+# managed_components/ in particular: the Component Manager re-creates it from
+# main/idf_component.yml. A hand-copied or stripped-down copy that has lost its
+# .component_hash / CHECKSUMS.json files makes the build fail outright with
+# "File .component_hash or CHECKSUMS.json ... does not exist or cannot be parsed".
+
+build/
+managed_components/
+dependencies.lock
+sdkconfig.old

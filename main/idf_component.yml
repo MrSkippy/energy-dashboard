@@ -1,0 +1,10 @@
+# Version-specific overlay: pins the registry LVGL to the version the
+# SquareLine UI was designed for (overwrites the Common idf_component.yml).
+description: ESP SquareLine LVGL Export
+dependencies:
+  idf: ">=5.3"
+  lvgl/lvgl: "~9.5.0"
+  espressif/esp_lcd_st77916: "~1.0.0"
+  espressif/esp_lcd_touch_cst816s: "^1.1.0"
+  # Tibber price JSON (fixture now, live API later); not built into ESP-IDF v6.
+  espressif/cjson: "^1.7.18"
